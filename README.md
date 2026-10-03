@@ -1,4 +1,9 @@
 # Hierarchical Taxonomy Classifier
+
+## Evaluation scope
+
+The current training script evaluates the same small held-out split after each epoch and uses its Level 3 accuracy to choose a checkpoint. That split is therefore a **validation split**, not an untouched test set. The reported numbers below are historical validation/demo results, not independent generalization estimates. A future experiment should select checkpoints on validation data and evaluate once on a separate product-disjoint test set.
+
 ### Fine-tuned DistilBERT — 3-Level Product Category Prediction
 
 > Built as part of an e-commerce ML portfolio targeting applied research roles at companies like eBay, Amazon, and Shopify.
@@ -192,8 +197,8 @@ taxonomy_classifier/
 
 ### Installation
 ```bash
-git clone <repo-url>
-cd taxonomy_classifier
+git clone https://github.com/boumalaksiham/Taxonomy-Classifier-DistilBERT.git
+cd Taxonomy-Classifier-DistilBERT
 
 python3 -m venv venv
 source venv/bin/activate       # Mac/Linux
@@ -260,7 +265,7 @@ When Level 3 confidence is below 20%, it's a signal the product type may not be 
 - No hierarchical constraint enforcement — theoretically possible to predict "Electronics > Men's Clothing > Jeans" even though that path is impossible
 
 **Extensions for production scale:**
-- **More training data**: The [Amazon Product Reviews](https://huggingface.co/datasets/amazon_us_reviews) dataset on HuggingFace contains millions of labeled products and would bring L3 accuracy above 95%
+- **More training data**: The [Amazon Product Reviews](https://huggingface.co/datasets/amazon_us_reviews) dataset on HuggingFace contains millions of labeled products and would support a more representative evaluation; the resulting accuracy must be measured
 - **Hierarchical constraints**: After predicting L1, restrict L2 softmax to only valid children of that L1 class. This eliminates impossible paths entirely.
 - **Confidence threshold + human review**: Flag predictions with L3 confidence below 25% for human review rather than serving a low-confidence prediction
 - **Quantization**: Apply INT8 quantization to reduce model size by 4x and inference time by 2x for production serving
