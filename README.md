@@ -2,6 +2,19 @@
 
 A multi-task text-classification prototype that predicts three product-category levels from a title using one shared DistilBERT encoder and three classification heads.
 
+## What a category path represents
+
+The curated labels distinguish a smartphone title from an accessory title even when both mention the same phone:
+
+| Dataset example | Assigned category path |
+|---|---|
+| Apple iPhone 15 Pro Max 256GB Natural Titanium Unlocked | Electronics → Phones → Smartphones |
+| OtterBox Defender Series Case for iPhone 15 Pro Black | Electronics → Phones → Phone Cases |
+
+These are dataset annotations, not measured predictions. The difficult distinction is the item being sold, rather than the product name appearing in the text.
+
+**Design choice:** share an encoder across category levels while keeping a separate output head for each. This reuses text features, but does not guarantee that the three predictions form a valid path. Per-level accuracy and path consistency answer different evaluation questions.
+
 ## Architecture and data
 
 [data/dataset_builder.py](data/dataset_builder.py) contains **77 curated product titles** spanning **5 broad categories, 12 intermediate categories, and 18 detailed categories**. Label mappings are generated from the dataset and saved for inference.
