@@ -74,3 +74,5 @@ Previously reported accuracy values are not reproduced or certified by this READ
 The dataset is small and hand-curated; fine-grained classes have few examples. There is no independent final test set, production deployment, or validated latency benchmark. Add product-disjoint train/validation/test partitions, hierarchical constraints or consistency reporting, stronger baselines, error analysis, and a saved evaluation report before making broader performance claims.
 
 The modified training script passes Python syntax compilation. Training has not been rerun; existing artifacts predate this repair. Rerun training to generate the new selected-checkpoint validation report.
+
+Checkpoint-selection regression checks: `python -m unittest discover -s tests -v`. These execute the trainer’s selection/reload statements with controlled epoch scores, including zero-score ties and a best epoch before the final epoch. They passed without model downloads; they do not test learned-model quality.
