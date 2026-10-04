@@ -23,6 +23,7 @@ Usage:
 import os
 import sys
 import json
+import random
 import torch
 import torch.nn as nn
 import numpy as np
@@ -48,7 +49,7 @@ CONFIG = {
     "epochs": 15,                                # increase for better accuracy
     "learning_rate": 2e-5,                      # standard for fine-tuning BERT
     "dropout_rate": 0.3,
-    "test_size": 0.2,                           # 20% held out for evaluation
+    "validation_size": 0.2,                           # 20% held out for evaluation
     "random_state": 42,
 }
 
@@ -177,6 +178,9 @@ def main():
     print("TAXONOMY CLASSIFIER — TRAINING")
     print("=" * 60)
 
+    random.seed(CONFIG["random_state"])
+    np.random.seed(CONFIG["random_state"])
+    torch.manual_seed(CONFIG["random_state"])
     device = torch.device("cpu")  # CPU-only
     print(f"Device: {device}")
 
@@ -195,11 +199,11 @@ def main():
     df["label_l2"] = df["level_2"].map(label_maps["l2_to_idx"])
     df["label_l3"] = df["level_3"].map(label_maps["l3_to_idx"])
 
-    # Train/test split
-    train_df, test_df = train_test_split(
-        df, test_size=CONFIG["test_size"], random_state=CONFIG["random_state"], stratify=df["label_l1"]
+    # Train/validation split
+    train_df, validation_df = train_test_split(
+        df, test_size=CONFIG["validation_size"], random_state=CONFIG["random_state"], stratify=df["label_l1"]
     )
-    print(f"  Train: {len(train_df)} | Test: {len(test_df)}")
+    print(f"  Train: {len(train_df)} | Validation: {len(validation_df)}")
 
     # ── 2. Tokenizer ─────────────────────────────────────────
     print(f"\nLoading tokenizer: {CONFIG['model_name']} ...")
@@ -214,16 +218,16 @@ def main():
         tokenizer, CONFIG["max_length"]
     )
 
-    test_dataset = ProductDataset(
-        test_df["title"].tolist(),
-        test_df["label_l1"].tolist(),
-        test_df["label_l2"].tolist(),
-        test_df["label_l3"].tolist(),
+    validation_dataset = ProductDataset(
+        validation_df["title"].tolist(),
+        validation_df["label_l1"].tolist(),
+        validation_df["label_l2"].tolist(),
+        validation_df["label_l3"].tolist(),
         tokenizer, CONFIG["max_length"]
     )
 
     train_loader = DataLoader(train_dataset, batch_size=CONFIG["batch_size"], shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=CONFIG["batch_size"], shuffle=False)
+    validation_loader = DataLoader(validation_dataset, batch_size=CONFIG["batch_size"], shuffle=False)
 
     # ── 4. Model ──────────────────────────────────────────────
     print(f"\nBuilding model...")
@@ -248,11 +252,11 @@ def main():
     print(f"\nTraining for {CONFIG['epochs']} epochs...")
     print("-" * 60)
 
-    best_l3_acc = 0.0
+    best_l3_acc = float("-inf")
 
     for epoch in range(1, CONFIG["epochs"] + 1):
         train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
-        acc_l1, acc_l2, acc_l3 = evaluate(model, test_loader, device)
+        acc_l1, acc_l2, acc_l3 = evaluate(model, validation_loader, device)
 
         print(f"Epoch {epoch}/{CONFIG['epochs']} | "
               f"Loss: {train_loss:.4f} | "
@@ -267,6 +271,16 @@ def main():
             torch.save(model.state_dict(), "models/saved/best_model.pt")
 
     print(f"\nBest Level 3 accuracy: {best_l3_acc:.2%}")
+
+    model.load_state_dict(torch.load("models/saved/best_model.pt", map_location=device, weights_only=True))
+    accuracies = evaluate(model, validation_loader, device)
+    with open("models/saved/validation_report.json", "w") as f:
+        json.dump({"evaluation_role": "checkpoint_selection_validation",
+                   "train_indices": train_df.index.tolist(),
+                   "validation_indices": validation_df.index.tolist(),
+                   "seed": CONFIG["random_state"],
+                   "accuracy_l1": accuracies[0], "accuracy_l2": accuracies[1],
+                   "accuracy_l3": accuracies[2]}, f, indent=2)
 
     # ── 7. Save everything needed for inference ───────────────
     tokenizer.save_pretrained("models/saved/tokenizer")

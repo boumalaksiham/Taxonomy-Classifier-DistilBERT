@@ -31,7 +31,7 @@ The encoder is `distilbert-base-uncased`. Three cross-entropy losses are summed 
 | Split | 61 training / 16 validation titles, stratified by Level 1 |
 | Split seed | 42 |
 
-The split is named `test` in the code, but it is used every epoch to select the best Level 3 checkpoint. Its scores are **validation scores**, not untouched-test performance. The split seed does not fully fix model-training randomness.
+The split is named `validation` and is used every epoch to select the best Level 3 checkpoint. Its scores are **validation scores**, not untouched-test performance. The selected checkpoint is reloaded and its metrics and split indices are saved to `models/saved/validation_report.json`. A checkpoint is saved even if the first Level 3 accuracy is zero. Python, NumPy, and PyTorch are seeded before model initialization and training. Determinism across platforms and library versions is not guaranteed.
 
 ## Setup
 
@@ -72,3 +72,5 @@ Previously reported accuracy values are not reproduced or certified by this READ
 ## Limitations and next steps
 
 The dataset is small and hand-curated; fine-grained classes have few examples. There is no independent final test set, production deployment, or validated latency benchmark. Add product-disjoint train/validation/test partitions, hierarchical constraints or consistency reporting, stronger baselines, error analysis, and a saved evaluation report before making broader performance claims.
+
+The modified training script passes Python syntax compilation. Training has not been rerun; existing artifacts predate this repair. Rerun training to generate the new selected-checkpoint validation report.
